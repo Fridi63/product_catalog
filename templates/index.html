@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% if title %}{{ title }} — {% endif %}Каталог продуктов</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+<nav class="top-strip">
+  <div class="container top-strip-inner">
+    <a class="brand-link" href="/">Каталог продуктов</a>
+    <div class="nav-links-wrap">
+      <a class="mini-nav-link d-none" id="nav-users" href="/admin/users">Пользователи</a>
+    </div>
+    <div class="user-panel">
+      <span id="nav-user"></span>
+      <a class="btn btn-sm btn-outline-light d-none" id="nav-logout" href="#" role="button">Выход</a>
+      <a class="btn btn-sm btn-light" id="nav-login" href="/login">Вход</a>
+    </div>
+  </div>
+</nav>
+<main class="container pb-5 page-shell">
+<h1 class="page-title-jun">Товары и категории</h1>
+<div class="d-flex flex-wrap align-items-end gap-2 mb-3">
+  <div>
+    <label class="form-label small mb-0" for="filter-q">Поиск</label>
+    <input class="form-control" id="filter-q" type="search" placeholder="Название, описание…" />
+  </div>
+  <div>
+    <label class="form-label small mb-0" for="filter-cat">Категория</label>
+    <select class="form-select" id="filter-cat">
+      <option value="">Все</option>
+    </select>
+  </div>
+  <button class="btn btn-secondary" type="button" id="btn-apply">Найти</button>
+  <div class="ms-auto d-none" id="wrap-add-prod">
+    <button class="btn btn-primary" type="button" id="btn-new-product">Добавить продукт</button>
+  </div>
+  <div class="d-none" id="wrap-cat-manage">
+    <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#m-cat" id="btn-manage-cat">Категории</button>
+  </div>
+</div>
+
+<div class="table-responsive box-jun">
+  <table class="table table-striped table-hover align-middle" id="tbl">
+    <thead>
+      <tr>
+        <th>Наименование</th>
+        <th>Категория</th>
+        <th>Описание</th>
+        <th>Стоимость, BYN <span class="text-muted" title="Наведите на *">*</span></th>
+        <th>Примечание</th>
+        <th class="col-spec" style="display:none">Примечание спец.</th>
+        <th class="text-end" id="th-actions" style="display:none">Действия</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+
+<div class="modal fade" id="m-product" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <form id="f-product">
+        <div class="modal-header">
+          <h5 class="modal-title" id="m-product-title">Продукт</h5>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="pf-id" />
+          <div class="row g-2">
+            <div class="col-12">
+              <label class="form-label" for="pf-name">Наименование</label>
+              <input class="form-control" id="pf-name" required />
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="pf-cat">Категория</label>
+              <select class="form-select" id="pf-cat" required></select>
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="pf-desc">Описание</label>
+              <textarea class="form-control" id="pf-desc" rows="2" required></textarea>
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="pf-price">Стоимость, BYN</label>
+              <input class="form-control" id="pf-price" type="number" min="0" step="0.0001" required />
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="pf-g">Примечание</label>
+              <input class="form-control" id="pf-g" />
+            </div>
+            <div class="col-12 d-none" id="wrap-pf-s">
+              <label class="form-label" for="pf-s">Примечание специальное</label>
+              <input class="form-control" id="pf-s" />
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <p class="text-danger me-auto small" id="pf-err"></p>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+          <button type="submit" class="btn btn-primary">Сохранить</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="m-usd" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Курс НБ РБ</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="usd-body">Загрузка…</div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="m-cat" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Категории</h5>
+      </div>
+      <div class="modal-body">
+        <form class="d-flex gap-2 mb-3" id="f-new-cat">
+          <input class="form-control" id="in-new-cat" placeholder="Новая категория" required />
+          <button class="btn btn-primary" type="submit">Добавить</button>
+        </form>
+        <p class="text-danger small" id="cat-err"></p>
+        <ul class="list-group" id="cat-list"></ul>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+      </div>
+    </div>
+  </div>
+</div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const TOKEN_KEY = "pc_token";
+function getToken() {
+  return localStorage.getItem(TOKEN_KEY);
+}
+function authHeaders() {
+  const t = getToken();
+  return t ? { Authorization: "Bearer " + t } : {};
+}
+async function apiFetch(path, init = {}) {
+  const h = { ...authHeaders(), ...(init.headers || {}) };
+  if (init.body && !h["Content-Type"]) h["Content-Type"] = "application/json";
+  const r = await fetch(path, { ...init, headers: h });
+  if (r.status === 401 && getToken()) {
+    localStorage.removeItem(TOKEN_KEY);
+    if (!path.includes("auth/login")) location.href = "/login";
+  }
+  return r;
+}
+let __me = null;
+let __productModal = null;
+let __usdModal = null;
+let __usdTimer = null;
+let __editProductId = null;
+
+async function loadMe() {
+  if (!getToken()) {
+    __me = null;
+    return null;
+  }
+  const r = await apiFetch("/api/auth/me", { method: "GET" });
+  if (!r.ok) {
+    __me = null;
+    return null;
+  }
+  __me = await r.json();
+  return __me;
+}
+function isRole() {
+  if (!__me) return false;
+  for (let i = 0; i < arguments.length; i++) {
+    if (arguments[i] === __me.role) return true;
+  }
+  return false;
+}
+function showNav() {
+  const u = document.getElementById("nav-user");
+  const login = document.getElementById("nav-login");
+  const out = document.getElementById("nav-logout");
+  const nUsers = document.getElementById("nav-users");
+  if (u) u.textContent = __me ? __me.username + " (" + __me.role_display + ")" : "Гость";
+  if (login) login.classList.toggle("d-none", !!__me);
+  if (out) {
+    out.classList.toggle("d-none", !__me);
+    out.onclick = (e) => {
+      e.preventDefault();
+      localStorage.removeItem(TOKEN_KEY);
+      location.href = "/";
+    };
+  }
+  if (nUsers) nUsers.classList.toggle("d-none", !isRole("admin"));
+}
+function fmtPrice(n) {
+  return n === undefined || n === null ? "" : String(n);
+}
+
+function renderTable(rows) {
+  const tbody = document.getElementById("tbody");
+  if (!tbody) return;
+  const showSpec = isRole("advanced", "admin");
+  document.querySelectorAll(".col-spec").forEach((el) => {
+    el.style.display = showSpec ? "" : "none";
+  });
+  const thAct = document.getElementById("th-actions");
+  const canAct = isRole("simple", "advanced", "admin");
+  if (thAct) thAct.style.display = canAct ? "" : "none";
+  const canDel = isRole("advanced", "admin");
+  tbody.innerHTML = "";
+  for (const p of rows) {
+    const tr = document.createElement("tr");
+    tr.innerHTML =
+      "<td></td><td></td><td></td><td></td><td></td>" + (showSpec ? "<td class='col-spec'></td>" : "");
+    tr.children[0].textContent = p.name;
+    tr.children[1].textContent = p.category_name;
+    tr.children[2].textContent = p.description;
+    tr.children[3].appendChild(document.createTextNode(fmtPrice(p.price) + " "));
+    const usd = document.createElement("span");
+    usd.className = "asterisk-cur";
+    usd.setAttribute("data-byn", p.price);
+    usd.setAttribute("title", "Стоимость в USD из BYN (НБ РБ)");
+    usd.textContent = "*";
+    usd.addEventListener("mouseenter", onHoverUsd);
+    tr.children[3].appendChild(usd);
+    tr.children[4].textContent = p.general_note;
+    if (showSpec) tr.children[5].textContent = p.special_note == null ? "—" : p.special_note;
+    if (canAct) {
+      const aTd = document.createElement("td");
+      aTd.className = "text-end";
+      const b1 = document.createElement("button");
+      b1.className = "btn btn-sm btn-outline-primary me-1";
+      b1.type = "button";
+      b1.textContent = "Изм.";
+      b1.addEventListener("click", () => openProductModal(p));
+      aTd.appendChild(b1);
+      if (canDel) {
+        const b2 = document.createElement("button");
+        b2.className = "btn btn-sm btn-outline-danger";
+        b2.type = "button";
+        b2.textContent = "Удал.";
+        b2.addEventListener("click", () => delProduct(p.id, p.name));
+        aTd.appendChild(b2);
+      }
+      tr.appendChild(aTd);
+    }
+    tbody.appendChild(tr);
+  }
+}
+function onHoverUsd(e) {
+  if (__usdTimer) clearTimeout(__usdTimer);
+  const byn = e.currentTarget.getAttribute("data-byn");
+  __usdTimer = setTimeout(() => showUsd(byn), 200);
+}
+async function showUsd(byn) {
+  const body = document.getElementById("usd-body");
+  if (!__usdModal) __usdModal = new bootstrap.Modal("#m-usd");
+  body.textContent = "Запрос к API НБ РБ…";
+  __usdModal.show();
+  const u = new URLSearchParams();
+  u.set("amount_byn", byn);
+  const r = await apiFetch("/api/fx/byn-to-usd?" + u.toString(), { method: "GET" });
+  if (!r.ok) {
+    const j = await r.json().catch(() => ({}));
+    body.innerHTML = "<p class='text-danger'>" + (j.detail || "Ошибка " + r.status) + "</p>";
+    return;
+  }
+  const d = await r.json();
+  body.innerHTML =
+    "<p><strong>" + d.amount_byn + " BYN</strong> ≈ <strong>" + d.amount_usd + " USD</strong></p>" +
+    "<p class='small text-muted'>Дата курса: " + d.on_date + "</p>";
+}
+async function loadCategories() {
+  const r = await apiFetch("/api/categories", { method: "GET" });
+  if (!r.ok) return;
+  const data = await r.json();
+  const f = document.getElementById("filter-cat");
+  const pf = document.getElementById("pf-cat");
+  const prevF = f ? f.value : "";
+  if (f) {
+    f.innerHTML = '<option value="">Все</option>';
+    for (const c of data) {
+      const o = document.createElement("option");
+      o.value = c.id;
+      o.textContent = c.name;
+      f.appendChild(o);
+    }
+    f.value = prevF;
+  }
+  if (pf) {
+    const prevP = pf.value;
+    pf.innerHTML = "";
+    for (const c of data) {
+      const o = document.createElement("option");
+      o.value = c.id;
+      o.textContent = c.name;
+      pf.appendChild(o);
+    }
+    if (prevP) pf.value = prevP;
+  }
+}
+async function loadProducts() {
+  const u = new URLSearchParams();
+  const q = document.getElementById("filter-q");
+  const c = document.getElementById("filter-cat");
+  if (q && q.value.trim()) u.set("q", q.value.trim());
+  if (c && c.value) u.set("category_id", c.value);
+  const r = await apiFetch("/api/products?" + u.toString(), { method: "GET" });
+  if (!r.ok) return;
+  renderTable(await r.json());
+}
+function openProductModal(p) {
+  if (!__productModal) __productModal = new bootstrap.Modal("#m-product");
+  __editProductId = p ? p.id : null;
+  document.getElementById("m-product-title").textContent = p ? "Правка" : "Новый продукт";
+  document.getElementById("pf-err").textContent = "";
+  document.getElementById("pf-name").value = p ? p.name : "";
+  document.getElementById("pf-desc").value = p ? p.description : "";
+  document.getElementById("pf-price").value = p ? p.price : "";
+  document.getElementById("pf-g").value = p ? p.general_note : "";
+  const w = document.getElementById("wrap-pf-s");
+  if (isRole("advanced", "admin")) {
+    w.classList.remove("d-none");
+    document.getElementById("pf-s").value = p && p.special_note != null ? p.special_note : "";
+  } else {
+    w.classList.add("d-none");
+  }
+  const pc = document.getElementById("pf-cat");
+  if (p) pc.value = String(p.category_id);
+  else if (pc.options.length) pc.selectedIndex = 0;
+  __productModal.show();
+}
+async function delProduct(id, name) {
+  if (!confirm("Удалить «" + name + "»?")) return;
+  const r = await apiFetch("/api/products/" + id, { method: "DELETE" });
+  if (r.status === 204) loadProducts();
+}
+function buildProductBody() {
+  const body = {
+    name: document.getElementById("pf-name").value.trim(),
+    description: document.getElementById("pf-desc").value,
+    price: document.getElementById("pf-price").value,
+    general_note: document.getElementById("pf-g").value,
+    category_id: +document.getElementById("pf-cat").value,
+  };
+  body.special_note = isRole("advanced", "admin") ? document.getElementById("pf-s").value : "";
+  return body;
+}
+function buildProductPatch() {
+  const b = buildProductBody();
+  if (isRole("simple")) delete b.special_note;
+  return b;
+}
+function initCategoryModal() {
+  const m = document.getElementById("m-cat");
+  const form = document.getElementById("f-new-cat");
+  const list = document.getElementById("cat-list");
+  if (!m || !form || !list) return;
+  m.addEventListener("show.bs.modal", async () => {
+    if (!isRole("advanced", "admin")) return;
+    const r = await apiFetch("/api/categories", { method: "GET" });
+    if (!r.ok) return;
+    const cats = await r.json();
+    list.innerHTML = "";
+    for (const c of cats) {
+      const li = document.createElement("li");
+      li.className = "list-group-item d-flex justify-content-between align-items-center";
+      const lab = document.createElement("span");
+      lab.textContent = c.name + " (" + c.product_count + " товар.)";
+      li.appendChild(lab);
+      const d = document.createElement("div");
+      d.className = "d-flex gap-1";
+      const b1 = document.createElement("button");
+      b1.className = "btn btn-sm btn-outline-primary";
+      b1.type = "button";
+      b1.textContent = "Переим.";
+      b1.addEventListener("click", async () => {
+        const n = prompt("Новое имя", c.name);
+        if (n == null || n === c.name) return;
+        const pr = await apiFetch("/api/categories/" + c.id, { method: "PATCH", body: JSON.stringify({ name: n }) });
+        if (pr.ok) {
+          bootstrap.Modal.getInstance(m)?.hide();
+          loadCategories();
+          loadProducts();
+        } else {
+          document.getElementById("cat-err").textContent = ((await pr.json().catch(() => ({}))).detail) || "Ошибка";
+        }
+      });
+      const b2 = document.createElement("button");
+      b2.className = "btn btn-sm btn-outline-danger";
+      b2.type = "button";
+      b2.textContent = "Удалить";
+      b2.addEventListener("click", async () => {
+        if (!confirm("Удалить категорию и ВСЕ товары в ней?")) return;
+        const pr = await apiFetch("/api/categories/" + c.id, { method: "DELETE" });
+        if (pr.status === 204) {
+          loadCategories();
+          loadProducts();
+        }
+      });
+      d.appendChild(b1);
+      d.appendChild(b2);
+      li.appendChild(d);
+      list.appendChild(li);
+    }
+  });
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const err = document.getElementById("cat-err");
+    if (err) err.textContent = "";
+    const name = document.getElementById("in-new-cat").value.trim();
+    if (!name) return;
+    const pr = await apiFetch("/api/categories", { method: "POST", body: JSON.stringify({ name }) });
+    if (!pr.ok) {
+      if (err) err.textContent = ((await pr.json().catch(() => ({}))).detail) || "Ошибка";
+      return;
+    }
+    document.getElementById("in-new-cat").value = "";
+    loadCategories();
+    loadProducts();
+  });
+}
+
+async function initIndex() {
+  await loadMe();
+  showNav();
+  document.getElementById("wrap-add-prod")?.classList.toggle("d-none", !isRole("simple", "advanced", "admin"));
+  document.getElementById("wrap-cat-manage")?.classList.toggle("d-none", !isRole("advanced", "admin"));
+  document.getElementById("btn-new-product")?.addEventListener("click", () => {
+    if (isRole("simple", "advanced", "admin")) openProductModal(null);
+  });
+  document.getElementById("btn-apply")?.addEventListener("click", () => loadProducts());
+  await loadCategories();
+  await loadProducts();
+  document.getElementById("f-product")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const err = document.getElementById("pf-err");
+    err.textContent = "";
+    const isEdit = __editProductId != null;
+    const body = isEdit ? buildProductPatch() : buildProductBody();
+    const url = isEdit ? "/api/products/" + __editProductId : "/api/products";
+    const r = await apiFetch(url, { method: isEdit ? "PATCH" : "POST", body: JSON.stringify(body) });
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      err.textContent = typeof j.detail === "string" ? j.detail : "Ошибка";
+      return;
+    }
+    if (__productModal) __productModal.hide();
+    loadProducts();
+  });
+}
+initIndex();
+initCategoryModal();
+</script>
+</body>
+</html>
