@@ -9,9 +9,9 @@ async def seed_if_empty(session: AsyncSession) -> None:
     if user_exists is None:
         session.add_all(
             [
-                User(user_name="admin", password=get_password_hash("qwerty123"), Role=UserRole.ADMIN),
-                User(user_name="advanced", password=get_password_hash("qwerty123"), Role=UserRole.ADVANCED),
-                User(user_name="simple", password=get_password_hash("qwerty123"), Role=UserRole.SIMPLE),
+                User(username="admin", password=get_password_hash("qwerty123"), role=UserRole.ADMIN),
+                User(username="advanced", password=get_password_hash("qwerty123"), role=UserRole.ADVANCED),
+                User(username="simple", password=get_password_hash("qwerty123"), role=UserRole.SIMPLE),
             ])
 
     category_exists = await session.scalar(select(Category.id).limit(1))
