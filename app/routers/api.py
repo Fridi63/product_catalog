@@ -76,6 +76,7 @@ async def create_category(
         raise HTTPException(status_code=400, detail="Категория с таким именем есть")
     c = await cr.create(data.name)
     await AuditRepository(session).add(user.username, "CATEGORY_CREATE", f"id={c.id} {c.name}")
+    await session.commit()
     log.info("Категория создана: %s", c.id)
     return CategoryOut(id=c.id, name=c.name, product_count=0)
 
@@ -96,6 +97,7 @@ async def update_category(
     c.name = data.name.strip()
     await cr.save(c)
     await AuditRepository(session).add(user.username, "CATEGORY_UPDATE", f"id={c.id} {c.name}")
+    await session.commit()
     n = await cr.count_products(c.id)
     return CategoryOut(id=c.id, name=c.name, product_count=n)
 
@@ -115,6 +117,7 @@ async def delete_category(
     await AuditRepository(session).add(
         user.username, "CATEGORY_DELETE", f"id={category_id} {name} products={n}"
     )
+    await session.commit()
     return None
 
 @router.get("/products", response_model=list[ProductOut])
@@ -155,6 +158,7 @@ async def create_product(
     await AuditRepository(session).add(
         user.username, "PRODUCT_CREATE", f"id={p.id} {p.name}"
     )
+    await session.commit()
     return ProductOut.from_product(p, user)
 
 @router.get("/products/{product_id}", response_model=ProductOut)
@@ -195,6 +199,7 @@ async def update_product(
     await pr.save(p)
     p = await pr.get(product_id)
     await AuditRepository(session).add(user.username, "PRODUCT_UPDATE", f"id={p.id}")
+    await session.commit()
     return ProductOut.from_product(p, user)
 
 @router.delete("/products/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -212,6 +217,7 @@ async def delete_product(
     await AuditRepository(session).add(
         user.username, "PRODUCT_DELETE", f"id={product_id} {nm}"
     )
+    await session.commit()
     return None
 
 @router.get("/users", response_model=list[UserOut])
@@ -238,6 +244,7 @@ async def create_user(
     await AuditRepository(session).add(
         user.username, "USER_CREATE", f"id={u.id} login={u.username} role={u.role.value}"
     )
+    await session.commit()
     return UserOut.from_user(u)
 
 @router.patch("/users/{user_id}", response_model=UserOut)
@@ -262,6 +269,7 @@ async def update_user(
     await AuditRepository(session).add(
         admin.username, "USER_UPDATE", f"id={u.id} login={u.username}"
     )
+    await session.commit()
     return UserOut.from_user(u)
 
 @router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -281,6 +289,7 @@ async def delete_user(
     await AuditRepository(session).add(
         admin.username, "USER_DELETE", f"id={user_id} {login}"
     )
+    await session.commit()
     return None
 
 @router.get("/audit-logs", response_model=list[dict])
