@@ -1,6 +1,4 @@
 from decimal import Decimal
-
-from Scripts.rst2html4 import description
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy import select
 from security import get_password_hash
