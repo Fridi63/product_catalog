@@ -1,8 +1,7 @@
 from decimal import Decimal
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy import select
-from security import get_password_hash
-
+from app.security import get_password_hash
 from app.models import User, UserRole, Product, Category
 
 async def seed_if_empty(session: AsyncSession) -> None:
