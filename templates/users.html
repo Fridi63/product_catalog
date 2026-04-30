@@ -81,6 +81,7 @@
       <div class="col-md-2"><button class="btn btn-primary" type="submit">Создать</button></div>
     </form>
     <p class="text-danger small mt-2" id="nu-err"></p>
+    <p class="text-success small mt-1 mb-0" id="nu-ok"></p>
   </div>
 </div>
 </main>
@@ -218,19 +219,34 @@ document.getElementById("f-user").addEventListener("submit", async (e) => {
 document.getElementById("f-new-user").addEventListener("submit", async (e) => {
   e.preventDefault();
   const ne = document.getElementById("nu-err");
+  const ok = document.getElementById("nu-ok");
   ne.textContent = "";
+  if (ok) ok.textContent = "";
+  const submitBtn = e.currentTarget.querySelector("button[type='submit']");
+  if (submitBtn) submitBtn.disabled = true;
   const fd = new FormData(e.currentTarget);
   const body = {
     username: fd.get("username"),
     password: fd.get("password"),
     role: fd.get("role"),
   };
-  const rs = await apiFetch("/api/users", { method: "POST", body: JSON.stringify(body) });
-  if (rs.ok) {
-    e.currentTarget.reset();
-    initUsers();
-  } else {
-    ne.textContent = ((await rs.json().catch(() => ({}))).detail) || "Ошибка";
+  try {
+    const rs = await apiFetch("/api/users", { method: "POST", body: JSON.stringify(body) });
+    if (rs.ok) {
+      const created = await rs.json().catch(() => null);
+      e.currentTarget.reset();
+      await initUsers();
+      if (ok) {
+        ok.textContent =
+          "Пользователь создан" + (created && created.username ? ": " + created.username : "");
+      }
+    } else {
+      ne.textContent = ((await rs.json().catch(() => ({}))).detail) || "Ошибка";
+    }
+  } catch (_) {
+    ne.textContent = "Ошибка сети";
+  } finally {
+    if (submitBtn) submitBtn.disabled = false;
   }
 });
 initUsers();

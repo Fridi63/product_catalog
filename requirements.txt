@@ -1,4 +1,4 @@
-# Python 3.11+ — product_catalog (FastAPI, async Postgres, JWT, templates)
+python==3.13.5
 fastapi==0.136.1
 uvicorn[standard]==0.46.0
 pydantic==2.13.3
