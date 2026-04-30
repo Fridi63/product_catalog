@@ -9,12 +9,12 @@ templates = Jinja2Templates(directory=str(_TEMPL))
 
 @router.get("/", response_class=HTMLResponse)
 def index(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request, "title": "Каталог"})
+    return templates.TemplateResponse(request,"index.html", {"title": "Каталог"})
 
 @router.get("/login", response_class=HTMLResponse)
 def login_page(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request, "title": "Вход"})
+    return templates.TemplateResponse(request,"login.html", {"title": "Вход"})
 
 @router.get("/admin/users", response_class=HTMLResponse)
 def users_page(request: Request):
-    return templates.TemplateResponse("users.html", {"request": request, "title": "Пользователи"})
+    return templates.TemplateResponse(request,"users.html", {"title": "Пользователи"})
