@@ -80,12 +80,12 @@
       </div>
       <div class="col-md-2"><button class="btn btn-primary" type="submit">Создать</button></div>
     </form>
-    <p class="text-danger small mt-2" id="nu-err"></p>
-    <p class="text-success small mt-1 mb-0" id="nu-ok"></p>
+    <p class="small mt-2" id="nu-msg"></p>
   </div>
 </div>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/static/confirm-delete.js"></script>
 <script>
 const TOKEN_KEY = "pc_token";
 function getToken() {
@@ -185,8 +185,8 @@ async function initUsers() {
     b2.className = "btn btn-sm btn-outline-danger";
     b2.type = "button";
     b2.textContent = "Удалить";
-    b2.addEventListener("click", () => {
-      if (!confirm("Удалить " + u.username + "?")) return;
+    b2.addEventListener("click", async () => {
+      if (!(await confirmDelete("Удалить " + u.username + "?"))) return;
       apiFetch("/api/users/" + u.id, { method: "DELETE" }).then((x) => {
         if (x.status === 204) initUsers();
       });
@@ -218,33 +218,52 @@ document.getElementById("f-user").addEventListener("submit", async (e) => {
 });
 document.getElementById("f-new-user").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const ne = document.getElementById("nu-err");
-  const ok = document.getElementById("nu-ok");
-  ne.textContent = "";
-  if (ok) ok.textContent = "";
-  const submitBtn = e.currentTarget.querySelector("button[type='submit']");
+  const msg = document.getElementById("nu-msg");
+  const form = e.currentTarget;
+  msg.textContent = "";
+  msg.className = "small mt-2";
+  const submitBtn = form.querySelector("button[type='submit']");
   if (submitBtn) submitBtn.disabled = true;
-  const fd = new FormData(e.currentTarget);
+  const fd = new FormData(form);
   const body = {
     username: fd.get("username"),
     password: fd.get("password"),
     role: fd.get("role"),
   };
+  const typedUsername = String(body.username || "").trim();
   try {
-    const rs = await apiFetch("/api/users", { method: "POST", body: JSON.stringify(body) });
-    if (rs.ok) {
-      const created = await rs.json().catch(() => null);
-      e.currentTarget.reset();
-      await initUsers();
-      if (ok) {
-        ok.textContent =
-          "Пользователь создан" + (created && created.username ? ": " + created.username : "");
-      }
-    } else {
-      ne.textContent = ((await rs.json().catch(() => ({}))).detail) || "Ошибка";
+    let rs;
+    try {
+      rs = await apiFetch("/api/users", { method: "POST", body: JSON.stringify(body) });
+    } catch (_) {
+      msg.className = "text-danger small mt-2";
+      msg.textContent = "Ошибка сети";
+      return;
     }
+    if (!rs.ok) {
+      const j = await rs.json().catch(() => ({}));
+      msg.className = "text-danger small mt-2";
+      msg.textContent = (typeof j.detail === "string" ? j.detail : null) || "Ошибка";
+      return;
+    }
+    let created = null;
+    try {
+      created = await rs.json();
+    } catch (_) {
+      created = null;
+    }
+    const displayName = (created && created.username) || typedUsername;
+    form.reset();
+    msg.className = "text-success small mt-2";
+    msg.textContent = displayName
+      ? "Пользователь " + displayName + " создан."
+      : "Пользователь создан.";
+    initUsers().catch(() => {
+      msg.textContent += " Список не обновился — обновите страницу.";
+    });
   } catch (_) {
-    ne.textContent = "Ошибка сети";
+    msg.className = "text-danger small mt-2";
+    msg.textContent = "Ошибка сети";
   } finally {
     if (submitBtn) submitBtn.disabled = false;
   }

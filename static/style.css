@@ -87,3 +87,29 @@ main {
   padding: 8px;
   background: #fff;
 }
+
+.cat-created-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 1.25rem;
+  transform: translateX(-50%) translateY(140%);
+  z-index: 1100;
+  max-width: min(22rem, calc(100vw - 2rem));
+  padding: 0.5rem 1rem;
+  background: #d1e7dd;
+  border: 1px solid #badbcc;
+  color: #0f5132;
+  font-size: 0.875rem;
+  line-height: 1.35;
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform 0.22s ease-out,
+    opacity 0.22s ease-out;
+}
+.cat-created-toast.cat-created-toast--visible {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}

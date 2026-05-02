@@ -139,7 +139,9 @@
   </div>
 </div>
 </main>
+<div id="cat-created-toast" class="cat-created-toast" role="status" aria-live="polite"></div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/static/confirm-delete.js"></script>
 <script>
 const TOKEN_KEY = "pc_token";
 function getToken() {
@@ -341,7 +343,7 @@ function openProductModal(p) {
   __productModal.show();
 }
 async function delProduct(id, name) {
-  if (!confirm("Удалить «" + name + "»?")) return;
+  if (!(await confirmDelete("Удалить «" + name + "»?"))) return;
   const r = await apiFetch("/api/products/" + id, { method: "DELETE" });
   if (r.status === 204) loadProducts();
 }
@@ -360,6 +362,19 @@ function buildProductPatch() {
   const b = buildProductBody();
   if (isRole("simple")) delete b.special_note;
   return b;
+}
+function showCategoryCreatedToast(name) {
+  const el = document.getElementById("cat-created-toast");
+  if (!el) return;
+  clearTimeout(showCategoryCreatedToast._t);
+  el.textContent = name ? "Категория «" + name + "» создана." : "Категория создана.";
+  el.classList.remove("cat-created-toast--visible");
+  requestAnimationFrame(function () {
+    el.classList.add("cat-created-toast--visible");
+  });
+  showCategoryCreatedToast._t = setTimeout(function () {
+    el.classList.remove("cat-created-toast--visible");
+  }, 2200);
 }
 function initCategoryModal() {
   const m = document.getElementById("m-cat");
@@ -401,7 +416,7 @@ function initCategoryModal() {
       b2.type = "button";
       b2.textContent = "Удалить";
       b2.addEventListener("click", async () => {
-        if (!confirm("Удалить категорию и ВСЕ товары в ней?")) return;
+        if (!(await confirmDelete("Удалить категорию и ВСЕ товары в ней?"))) return;
         const pr = await apiFetch("/api/categories/" + c.id, { method: "DELETE" });
         if (pr.status === 204) {
           loadCategories();
@@ -426,6 +441,7 @@ function initCategoryModal() {
       return;
     }
     document.getElementById("in-new-cat").value = "";
+    showCategoryCreatedToast(name);
     loadCategories();
     loadProducts();
   });

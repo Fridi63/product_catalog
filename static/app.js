@@ -1,4 +1,3 @@
-
 const TOKEN_KEY = "pc_token";
 function getToken() {
   return localStorage.getItem(TOKEN_KEY);
@@ -240,7 +239,7 @@ function openProductModal(p) {
 }
 
 async function delProduct(id, name) {
-  if (!confirm("Удалить «" + name + "»?")) return;
+  if (!(await confirmDelete("Удалить «" + name + "»?"))) return;
   const r = await apiFetch("/api/products/" + id, { method: "DELETE" });
   if (r.status === 204) loadProducts();
   else {
@@ -350,7 +349,7 @@ function initCategoryModal() {
       b2.type = "button";
       b2.textContent = "Удалить";
       b2.addEventListener("click", async () => {
-        if (!confirm("Удалить категорию и ВСЕ товары в ней?")) return;
+        if (!(await confirmDelete("Удалить категорию и ВСЕ товары в ней?"))) return;
         const pr = await apiFetch("/api/categories/" + c.id, { method: "DELETE" });
         if (pr.status === 204) {
           loadCategories();
@@ -434,8 +433,8 @@ async function initUsers() {
     b2.className = "btn btn-sm btn-outline-danger";
     b2.type = "button";
     b2.textContent = "Удалить";
-    b2.addEventListener("click", () => {
-      if (!confirm("Удалить " + u.username + "?")) return;
+    b2.addEventListener("click", async () => {
+      if (!(await confirmDelete("Удалить " + u.username + "?"))) return;
       apiFetch("/api/users/" + u.id, { method: "DELETE" }).then((x) => {
         if (x.status === 204) initUsers();
         else
