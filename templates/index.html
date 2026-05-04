@@ -381,9 +381,10 @@ function initCategoryModal() {
   const form = document.getElementById("f-new-cat");
   const list = document.getElementById("cat-list");
   if (!m || !form || !list) return;
-  m.addEventListener("show.bs.modal", async () => {
+  async function refillCategoryManageList() {
     if (!isRole("advanced", "admin")) return;
-    const r = await apiFetch("/api/categories", { method: "GET" });
+    const catErr = document.getElementById("cat-err");
+    const r = await apiFetch("/api/categories", {method: "GET"});
     if (!r.ok) return;
     const cats = await r.json();
     list.innerHTML = "";
@@ -402,13 +403,13 @@ function initCategoryModal() {
       b1.addEventListener("click", async () => {
         const n = prompt("Новое имя", c.name);
         if (n == null || n === c.name) return;
-        const pr = await apiFetch("/api/categories/" + c.id, { method: "PATCH", body: JSON.stringify({ name: n }) });
+        const pr = await apiFetch("/api/categories/" + c.id, {method: "PATCH", body: JSON.stringify({name: n})});
         if (pr.ok) {
           bootstrap.Modal.getInstance(m)?.hide();
           loadCategories();
           loadProducts();
         } else {
-          document.getElementById("cat-err").textContent = ((await pr.json().catch(() => ({}))).detail) || "Ошибка";
+          if (catErr) catErr.textContent = ((await pr.json().catch(() => ({}))).detail) || "Ошибка";
         }
       });
       const b2 = document.createElement("button");
@@ -417,10 +418,15 @@ function initCategoryModal() {
       b2.textContent = "Удалить";
       b2.addEventListener("click", async () => {
         if (!(await confirmDelete("Удалить категорию и ВСЕ товары в ней?"))) return;
-        const pr = await apiFetch("/api/categories/" + c.id, { method: "DELETE" });
+        const pr = await apiFetch("/api/categories/" + c.id, {method: "DELETE"});
         if (pr.status === 204) {
           loadCategories();
           loadProducts();
+          await refillCategoryManageList();
+        } else {
+          const j = await pr.json().catch(() => ({}));
+          const msg = typeof j.detail === "string" ? j.detail : j.detail && JSON.stringify(j.detail);
+          if (catErr) catErr.textContent = msg || "Ошибка";
         }
       });
       d.appendChild(b1);
@@ -428,6 +434,9 @@ function initCategoryModal() {
       li.appendChild(d);
       list.appendChild(li);
     }
+  }
+  m.addEventListener("show.bs.modal", () => {
+    refillCategoryManageList();
   });
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
