@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlalchemy import func
@@ -32,6 +32,7 @@ class CategoryRepository:
         await self._s.flush()
 
     async def delete(self, c: Category) -> None:
+        await self._s.execute(delete(Product).where(Product.category_id == c.id))
         await self._s.delete(c)
 
     async def count_products(self, category_id: int) -> int:
