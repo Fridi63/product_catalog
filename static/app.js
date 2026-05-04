@@ -128,6 +128,7 @@ function renderTable(rows) {
       const aTd = document.createElement("td");
       aTd.className = "text-end";
       const b1 = document.createElement("button");
+
       b1.className = "btn btn-sm btn-outline-primary me-1";
       b1.type = "button";
       b1.textContent = "Изм.";
@@ -248,6 +249,7 @@ async function delProduct(id, name) {
   }
 }
 
+
 function buildProductBody() {
   const body = {
     name: document.getElementById("pf-name").value.trim(),
@@ -305,20 +307,22 @@ async function initIndex() {
   });
 }
 
+
 function initCategoryModal() {
   const m = document.getElementById("m-cat");
   const form = document.getElementById("f-new-cat");
   const list = document.getElementById("cat-list");
   if (!m || !form || !list) return;
-  m.addEventListener("show.bs.modal", async () => {
+  async function refillCategoryManageList() {
     if (!isRole("advanced", "admin")) return;
+    const catErr = document.getElementById("cat-err");
     const r = await apiFetch("/api/categories", { method: "GET" });
     if (!r.ok) return;
     const cats = await r.json();
     list.innerHTML = "";
-    for (const c of cats) {
-      const li = document.createElement("li");
-      li.className = "list-group-item d-flex justify-content-between align-items-center";
+    function viewRow(li, c) {
+      li.className = "list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2";
+      li.replaceChildren();
       const lab = document.createElement("span");
       lab.textContent = c.name + " (" + c.product_count + " товар.)";
       li.appendChild(lab);
@@ -328,22 +332,7 @@ function initCategoryModal() {
       b1.className = "btn btn-sm btn-outline-primary";
       b1.type = "button";
       b1.textContent = "Переим.";
-      b1.addEventListener("click", async () => {
-        const n = prompt("Новое имя", c.name);
-        if (n == null || n === c.name) return;
-        const pr = await apiFetch("/api/categories/" + c.id, {
-          method: "PATCH",
-          body: JSON.stringify({ name: n }),
-        });
-        if (pr.ok) {
-          m.querySelector(".btn-close")?.click();
-          loadCategories();
-          loadProducts();
-        } else {
-          const j = await pr.json();
-          document.getElementById("cat-err").textContent = j.detail || "Ошибка";
-        }
-      });
+      b1.addEventListener("click", () => editRow(li, c));
       const b2 = document.createElement("button");
       b2.className = "btn btn-sm btn-outline-danger";
       b2.type = "button";
@@ -354,16 +343,73 @@ function initCategoryModal() {
         if (pr.status === 204) {
           loadCategories();
           loadProducts();
+          await refillCategoryManageList();
         } else {
-          const j = await pr.json();
-          document.getElementById("cat-err").textContent = (j && j.detail) || "Ошибка";
+          const j = await pr.json().catch(() => ({}));
+          if (catErr) catErr.textContent = (j && j.detail) || "Ошибка";
         }
       });
       d.appendChild(b1);
       d.appendChild(b2);
       li.appendChild(d);
-      list.appendChild(li);
     }
+    function editRow(li, c) {
+      if (catErr) catErr.textContent = "";
+      li.className = "list-group-item";
+      li.replaceChildren();
+      const row = document.createElement("div");
+      row.className = "d-flex flex-wrap gap-2 align-items-center w-100";
+      const inp = document.createElement("input");
+      inp.className = "form-control form-control-sm";
+      inp.maxLength = 128;
+      inp.value = c.name;
+      inp.style.flex = "1 1 10rem";
+      const ok = document.createElement("button");
+      ok.type = "button";
+      ok.className = "btn btn-sm btn-primary";
+      ok.textContent = "Ок";
+      const cancel = document.createElement("button");
+      cancel.type = "button";
+      cancel.className = "btn btn-sm btn-outline-secondary";
+      cancel.textContent = "Отмена";
+      const errLine = document.createElement("small");
+      errLine.className = "text-danger d-block w-100 mt-1";
+      row.appendChild(inp);
+      row.appendChild(ok);
+      row.appendChild(cancel);
+      li.appendChild(row);
+      li.appendChild(errLine);
+      cancel.addEventListener("click", () => refillCategoryManageList());
+      ok.addEventListener("click", async () => {
+        errLine.textContent = "";
+        const name = inp.value.trim();
+        if (!name) return;
+        const pr = await apiFetch("/api/categories/" + c.id, { method: "PATCH", body: JSON.stringify({ name }) });
+        if (pr.ok) {
+          loadCategories();
+          loadProducts();
+          await refillCategoryManageList();
+        } else {
+          const j = await pr.json().catch(() => ({}));
+          if (Array.isArray(j.detail)) {
+            errLine.textContent = j.detail.map((x) => (x.msg ? x.msg : JSON.stringify(x))).join(" ");
+          } else {
+            errLine.textContent = (typeof j.detail === "string" ? j.detail : null) || "Ошибка";
+          }
+        }
+      });
+      inp.focus();
+      inp.select();
+    }
+    for (const c of cats) {
+      const li = document.createElement("li");
+
+      list.appendChild(li);
+      viewRow(li, c);
+    }
+  }
+  m.addEventListener("show.bs.modal", () => {
+    refillCategoryManageList();
   });
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -478,6 +524,7 @@ async function initUsers() {
   const fnu = document.getElementById("f-new-user");
   if (fnu && !fnu.dataset.bound) {
     fnu.dataset.bound = "1";
+
     fnu.addEventListener("submit", async (e) => {
       e.preventDefault();
       const ne = document.getElementById("nu-err");
@@ -533,7 +580,6 @@ async function initLogs() {
     t.appendChild(tr);
   }
 }
-
 document.addEventListener("DOMContentLoaded", () => {
   const path = location.pathname;
   if (path === "/") {
